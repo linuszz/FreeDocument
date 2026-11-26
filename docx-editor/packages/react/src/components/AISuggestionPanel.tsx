@@ -196,12 +196,14 @@ export function AISuggestionPanel({
     return () => document.removeEventListener('keydown', onKey);
   }, [onAccept, onReject, suggestion, busy]);
 
-  const title = mode === 'rewrite' ? t('contextMenu.rewriteWithAi') : t('contextMenu.summarizeWithAi');
+  const title =
+    mode === 'rewrite' ? t('contextMenu.rewriteWithAi') : t('contextMenu.summarizeWithAi');
   // Accept stages the change as a tracked suggestion (deletion +
   // insertion marks) — the doc body shows it with the standard
   // red-strike / green-underline UI so the user can Accept / Reject
   // it permanently through the existing tracked-change controls.
-  const acceptLabel = mode === 'rewrite' ? t('aiSuggestion.suggestReplacement') : t('aiSuggestion.suggestInsert');
+  const acceptLabel =
+    mode === 'rewrite' ? t('aiSuggestion.suggestReplacement') : t('aiSuggestion.suggestInsert');
 
   const footer = (
     <div style={footerStyle}>

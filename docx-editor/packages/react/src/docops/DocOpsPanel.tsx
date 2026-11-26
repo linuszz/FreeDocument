@@ -1338,9 +1338,7 @@ export function DocOpsPanel({
                       void send();
                     }
                   }}
-                  placeholder={
-                    busy ? t('docops.placeholderWorking') : t('docops.placeholderAsk')
-                  }
+                  placeholder={busy ? t('docops.placeholderWorking') : t('docops.placeholderAsk')}
                   rows={1}
                   style={textareaStyle}
                   disabled={busy}

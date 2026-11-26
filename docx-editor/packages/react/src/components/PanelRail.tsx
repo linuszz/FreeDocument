@@ -193,7 +193,11 @@ export function PanelRail({
       {onToggleHistory && (
         <RailButton
           testId="rail-history"
-          label={historyVisible ? t('commandPalette.hideVersionHistory') : t('sidebar.versionHistory.title')}
+          label={
+            historyVisible
+              ? t('commandPalette.hideVersionHistory')
+              : t('sidebar.versionHistory.title')
+          }
           icon="history"
           active={!!historyVisible}
           onClick={onToggleHistory}
@@ -211,7 +215,11 @@ export function PanelRail({
       {onToggleWriter && (
         <RailButton
           testId="rail-writer"
-          label={writerVisible ? t('panelRail.hideWritingAssistant') : t('dialogs.writingAssistant.panelTitle')}
+          label={
+            writerVisible
+              ? t('panelRail.hideWritingAssistant')
+              : t('dialogs.writingAssistant.panelTitle')
+          }
           // Distinct from DocOps (auto_awesome) — the writing assistant reads as
           // an editing/writing aide, not the same sparkle as document ops.
           icon="edit_note"

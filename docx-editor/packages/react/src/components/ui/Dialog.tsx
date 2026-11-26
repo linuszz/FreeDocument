@@ -237,7 +237,9 @@ export function Dialog({
         }}
         role="dialog"
         aria-modal="true"
-        aria-label={ariaLabel ?? (typeof title === 'string' ? title : t('ui.dialog.defaultAriaLabel'))}
+        aria-label={
+          ariaLabel ?? (typeof title === 'string' ? title : t('ui.dialog.defaultAriaLabel'))
+        }
         data-testid={testId}
       >
         <div style={shellStyle(width)} onMouseDown={(e) => e.stopPropagation()}>
