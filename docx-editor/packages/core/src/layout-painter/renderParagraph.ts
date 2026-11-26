@@ -1126,6 +1126,19 @@ export function renderLine(
   const hasHighlight = runsForLine.some((r) => isTextRun(r) && r.highlight);
   lineEl.style.overflow = hasHighlight ? 'hidden' : 'visible';
 
+  // Word clips the glyphs to the line box when `w:lineRule="exact"` (and
+  // `atLeast` never goes below the natural height) is smaller than the text's
+  // natural ascent+descent. Without the clip the overflow spills into the
+  // neighbouring lines and reads as overlapping text.
+  //
+  // Vertical-only clip: a negative horizontal inset leaves the horizontal
+  // extent untouched, so italic overhang and trailing punctuation are not
+  // trimmed the way `overflow: hidden` would trim them.
+  const naturalLineHeight = line.ascent + line.descent;
+  if (block.attrs?.spacing?.lineRule === 'exact' && line.lineHeight + 0.5 < naturalLineHeight) {
+    lineEl.style.clipPath = 'inset(0 -9999px)';
+  }
+
   // Per-line floating margins (leftOffset/rightOffset) are now applied by
   // renderParagraphFragment via MeasuredLine offsets from re-measurement.
 
