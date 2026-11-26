@@ -24,6 +24,10 @@
  *   reads `window.location.*` lazily.
  */
 import { useEffect, useState } from 'react';
+import { BASE, stripBase } from '../lib/paths';
+
+// Re-exported so callers that already import from the router keep working.
+export { stripBase };
 
 export interface Route {
   /** Discriminant. Callers switch on this. */
@@ -76,10 +80,13 @@ export function parseRoute(pathname: string, search: string): Route {
 
 /** Imperative navigation. `replace: true` keeps the back stack clean. */
 export function navigate(to: string, opts: { replace?: boolean } = {}): void {
+  // Re-apply the deployment base: callers pass router paths ('/home'),
+  // not deployment paths ('/FreeDocument/home').
+  const href = BASE && to.startsWith('/') ? `${BASE}${to}` : to;
   if (opts.replace) {
-    window.history.replaceState(window.history.state, '', to);
+    window.history.replaceState(window.history.state, '', href);
   } else {
-    window.history.pushState({}, '', to);
+    window.history.pushState({}, '', href);
   }
   window.dispatchEvent(new CustomEvent(NAVIGATE_EVENT));
 }
@@ -87,11 +94,11 @@ export function navigate(to: string, opts: { replace?: boolean } = {}): void {
 /** Subscribe to the current route. Re-reads on popstate + cd:navigate. */
 export function useRoute(): Route {
   const [route, setRoute] = useState<Route>(() =>
-    parseRoute(window.location.pathname, window.location.search)
+    parseRoute(stripBase(window.location.pathname), window.location.search)
   );
   useEffect(() => {
     const read = () => {
-      setRoute(parseRoute(window.location.pathname, window.location.search));
+      setRoute(parseRoute(stripBase(window.location.pathname), window.location.search));
     };
     window.addEventListener('popstate', read);
     window.addEventListener(NAVIGATE_EVENT, read as EventListener);

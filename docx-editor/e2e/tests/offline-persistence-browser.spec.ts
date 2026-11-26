@@ -64,6 +64,12 @@ async function mockSeed(page: import('@playwright/test').Page): Promise<void> {
 }
 
 test.describe('offline persistence — real browser + IndexedDB', () => {
+  // Serial: the file-scoped `beforeAll` below binds a FIXED port (8899). With
+  // `fullyParallel: true` both tests land in different workers, each running
+  // `beforeAll` → the second listen() dies with EADDRINUSE. Serial keeps them
+  // in one worker, and they share the server anyway (the second test takes it
+  // down and restarts it).
+  test.describe.configure({ mode: 'serial' });
   test('an edit survives a page reload (collab + IndexedDB)', async ({ page }) => {
     const room = `idb-reload-${Date.now()}`;
     const editor = new EditorPage(page);
