@@ -635,6 +635,14 @@ export type ParagraphMeasure = {
   kind: 'paragraph';
   lines: MeasuredLine[];
   totalHeight: number;
+  /**
+   * A list marker with no hanging-indent slot normally sits on the same line
+   * as the text, right before a tab advance. It only gets a row of its own
+   * when it cannot fit (Word's `w:suff="tab"` wrap). Measurement decides this
+   * once so the paginator and the painter cannot disagree — they used to, and
+   * the paragraph after a wrapped marker was painted on top of it.
+   */
+  listMarkerOwnLine?: boolean;
 };
 
 /**

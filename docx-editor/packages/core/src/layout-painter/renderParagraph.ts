@@ -1640,19 +1640,33 @@ export function renderParagraphFragment(
         markerFontFamily,
         markerFontSize
       );
-      // With no hanging indent slot reserved for the marker, Word's default
-      // tab suffix wraps the body text below the marker (§17.9.25). We mirror
-      // that by giving the marker its own line, sized to match line height.
+      // With no hanging indent slot reserved for the marker, Word's default tab
+      // suffix either advances the text on the same line or, when the marker
+      // doesn't fit at all, wraps it onto its own row (§17.9.25). Measurement
+      // decided which one applies (`listMarkerOwnLine`) so the paginator and
+      // this painter can't disagree about the paragraph's height.
       const hanging = indent?.hanging ?? 0;
       if (hanging > 0) {
         lineEl.insertBefore(marker, lineEl.firstChild);
-      } else {
+      } else if (measure.listMarkerOwnLine) {
         const markerLine = doc.createElement('div');
         markerLine.className = 'layout-line layout-list-marker-line';
         markerLine.style.height = `${line.lineHeight}px`;
         markerLine.style.lineHeight = `${line.lineHeight}px`;
         markerLine.appendChild(marker);
         fragmentEl.appendChild(markerLine);
+      } else {
+        // Same line: give the marker box the width of the marker plus the tab
+        // advance, so the text starts at the next tab stop.
+        const measureMarker = createTextMeasurer(doc);
+        const markerWidth = measureMarker(block.attrs.listMarker, markerFontSize, markerFontFamily);
+        const tabContext: TabContext = {
+          explicitStops: block.attrs?.tabs?.map(convertTabStopToCalc),
+          leftIndent: Math.round(indentLeft * 15),
+        };
+        const tab = calculateTabWidth(markerPos + markerWidth, tabContext);
+        marker.style.minWidth = `${markerWidth + tab.width}px`;
+        lineEl.insertBefore(marker, lineEl.firstChild);
       }
     }
 

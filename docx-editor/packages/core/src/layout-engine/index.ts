@@ -543,6 +543,13 @@ function layoutParagraph(
   const spaceBefore = getSpacingBefore(block);
   const spaceAfter = getSpacingAfter(block);
 
+  // A list marker that could not fit on the first line is painted on its own
+  // row above the text (see measureParagraph / listMarker.ts). The line loop
+  // below only sums `lines[]`, so reserve that row here too — otherwise the
+  // fragment is one line short and every following block is painted on top of
+  // it (CJK "第X条" headings, template-618).
+  const markerLineHeight = measure.listMarkerOwnLine ? lines[0].lineHeight : 0;
+
   // Try to fit all lines on current page/column
   let currentLineIndex = 0;
 
@@ -551,7 +558,7 @@ function layoutParagraph(
     const availableHeight = paginator.getAvailableHeight();
 
     // Calculate how many lines fit
-    let linesHeight = 0;
+    let linesHeight = currentLineIndex === 0 ? markerLineHeight : 0;
     let fittingLines = 0;
 
     for (let j = currentLineIndex; j < lines.length; j++) {
@@ -593,7 +600,7 @@ function layoutParagraph(
         if (fittingLines - 1 >= minThisSide) {
           // Pull one line down so two travel together.
           fittingLines -= 1;
-          linesHeight = 0;
+          linesHeight = currentLineIndex === 0 ? markerLineHeight : 0;
           for (let j = currentLineIndex; j < currentLineIndex + fittingLines; j++) {
             linesHeight += lines[j].lineHeight;
           }
