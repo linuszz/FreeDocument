@@ -31,12 +31,16 @@
 
 import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import JSZip from 'jszip';
 import { parseDocx } from '../index';
 import { repackDocx } from '../index';
 
-const FIXTURE = new URL('../../../../../e2e/fixtures/issue-319-sections.docx', import.meta.url)
-  .pathname;
+// `fileURLToPath`, not `new URL(...).pathname`: on Windows the latter
+// yields a POSIX-style "/C:/..." path that node:fs cannot open.
+const FIXTURE = fileURLToPath(
+  new URL('../../../../../e2e/fixtures/issue-319-sections.docx', import.meta.url)
+);
 
 async function tagCounts(buf: Buffer): Promise<Record<string, number>> {
   const zip = await JSZip.loadAsync(buf);

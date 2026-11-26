@@ -44,6 +44,7 @@ import {
   existsSync,
 } from 'node:fs';
 import { join, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import JSZip from 'jszip';
@@ -52,8 +53,8 @@ import { serializeDocument } from '../packages/core/src/docx/serializer/document
 
 // ─── Config ────────────────────────────────────────────────────────
 
-const FIXTURE_DIR = new URL('../e2e/fixtures', import.meta.url).pathname;
-const DEFAULT_OUT = new URL('../fidelity-compare-report.md', import.meta.url).pathname;
+const FIXTURE_DIR = fileURLToPath(new URL('../e2e/fixtures', import.meta.url));
+const DEFAULT_OUT = fileURLToPath(new URL('../fidelity-compare-report.md', import.meta.url));
 // Pristine-share floor. We promote ourselves as lightweight; we don't need
 // to clear OnlyOffice's bar but we won't ship a desktop release below this.
 const PRISTINE_FLOOR = Number(process.env.FIDELITY_FLOOR ?? 0.5);

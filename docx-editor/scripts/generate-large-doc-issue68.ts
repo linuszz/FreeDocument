@@ -11,6 +11,7 @@
 import JSZip from 'jszip';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'node:url';
 
 const CONTENT_TYPES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -169,7 +170,7 @@ async function main() {
 
   // Save to e2e fixtures
   const outputPath = path.join(
-    path.dirname(new URL(import.meta.url).pathname),
+    path.dirname(fileURLToPath(import.meta.url)),
     '..',
     'e2e',
     'fixtures',
