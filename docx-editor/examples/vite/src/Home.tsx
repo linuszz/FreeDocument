@@ -3,6 +3,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { assetUrl } from './lib/paths';
 import {
   CATEGORIES,
   CATEGORY_LABEL_KEYS,
@@ -476,10 +477,7 @@ function TemplateCard({
         {isBlank ? (
           <div style={styles.cardThumbEmpty}>
             <span style={styles.cardThumbEmptyIcon} aria-hidden="true">
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: isMobile ? 28 : 34 }}
-              >
+              <span className="material-symbols-outlined" style={{ fontSize: isMobile ? 28 : 34 }}>
                 {entry.icon}
               </span>
             </span>
@@ -487,7 +485,7 @@ function TemplateCard({
         ) : (
           <>
             <img
-              src={entry.thumbnail}
+              src={assetUrl(entry.thumbnail)}
               alt=""
               aria-hidden="true"
               draggable={false}
@@ -786,7 +784,11 @@ function RecentCard({
   );
 }
 
-export function Home({ onNewDocument, onSelectTemplate, onOpenFile }: HomeProps): React.JSX.Element {
+export function Home({
+  onNewDocument,
+  onSelectTemplate,
+  onOpenFile,
+}: HomeProps): React.JSX.Element {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -880,7 +882,7 @@ export function Home({ onNewDocument, onSelectTemplate, onOpenFile }: HomeProps)
     <div style={styles.page} data-testid="home-page">
       <header style={{ ...styles.topBar, ...(isMobile && mobile.topBar) }}>
         <div style={styles.brandRow}>
-          <img src="/logo.svg" alt="" style={styles.brandLogo} aria-hidden="true" />
+          <img src={assetUrl('/logo.svg')} alt="" style={styles.brandLogo} aria-hidden="true" />
           <div style={styles.brandName}>
             Casual <span style={{ color: COLORS.brand }}>Editor</span>
           </div>
@@ -933,11 +935,7 @@ export function Home({ onNewDocument, onSelectTemplate, onOpenFile }: HomeProps)
             <h2 style={styles.sectionTitle}>{t('home.createNew')}</h2>
           </div>
           <div style={{ ...styles.featuredRow, ...(isMobile && mobile.featuredRow) }}>
-            <TemplateCard
-              entry={blankDocument}
-              onSelect={onNewDocument}
-              isMobile={isMobile}
-            />
+            <TemplateCard entry={blankDocument} onSelect={onNewDocument} isMobile={isMobile} />
             <TemplateCard entry={blankMarkdown} onSelect={onSelectTemplate} isMobile={isMobile} />
           </div>
         </section>

@@ -36,7 +36,8 @@ import { RtfViewer } from './viewers/RtfViewer';
 import { EmlViewer } from './viewers/EmlViewer';
 import { loadTemplate } from './templates/loader';
 import type { TemplateEntry } from './templates/manifest';
-import { navigate, useRoute } from './router';
+import { navigate, stripBase, useRoute } from './router';
+import { assetUrl } from './lib/paths';
 
 /**
  * Initial view derivation. Two signals matter:
@@ -72,7 +73,10 @@ function getInitialView(): 'home' | 'editor' {
   }
   if (isLegacyForcedEditor()) return 'editor';
   // Route-driven. `/` and `/home` → home; `/document/*` → editor.
-  if (window.location.pathname === '/' || window.location.pathname === '/home') {
+  // `stripBase` so a Pages project site (`/FreeDocument/`) lands on home
+  // instead of falling through to the editor.
+  const path = stripBase(window.location.pathname);
+  if (path === '/' || path === '/home') {
     return 'home';
   }
   return 'editor';
@@ -324,7 +328,7 @@ function AutosaveE2E() {
  */
 function isEmbedRoute(): boolean {
   if (typeof window === 'undefined') return false;
-  return window.location.pathname === '/embed';
+  return stripBase(window.location.pathname) === '/embed';
 }
 
 interface EmbedConfig {
@@ -1353,7 +1357,7 @@ export function App() {
         data-testid="title-bar-home"
       >
         <img
-          src="/logo.svg"
+          src={assetUrl('/logo.svg')}
           alt=""
           width={32}
           height={32}
