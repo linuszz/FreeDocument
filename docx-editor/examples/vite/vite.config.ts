@@ -50,6 +50,11 @@ export default defineConfig(async () => {
   return {
     plugins: [react(), spaFallback404()],
     root: __dirname,
+    // Serve at '/' by default (custom domain, self-hosted, dev). A GitHub
+    // Pages *project* site lives under '/<repo>/', so the deploy workflow
+    // passes the real base path via VITE_BASE. Loading the bundle from the
+    // wrong base leaves every asset 404 and the page blank.
+    base: process.env.VITE_BASE || '/',
     // katex is a transitive dep of the source-linked @casualoffice/docs
     // workspace package — pre-bundle it so vite doesn't serve its ESM raw.
     optimizeDeps: {

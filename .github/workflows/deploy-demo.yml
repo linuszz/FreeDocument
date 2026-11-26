@@ -52,21 +52,26 @@ jobs:
       - name: Build core + react libs
         run: bun run build
 
-      # Custom domain (docs.casualoffice.org) means Pages serves at root '/',
-      # not '/<repo>/'. Vite's default base = '/' is correct; no override.
+      # Setup Pages BEFORE the demo build: `configure-pages` reports the
+      # site's base path, which Vite needs at build time.
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      # Base path: '' for a custom domain / user site (served at '/'),
+      # '/<repo>' for a project site like <user>.github.io/<repo>/. Vite's
+      # default base of '/' would 404 every asset on a project site.
       - name: Build demo (Vite)
+        env:
+          VITE_BASE: ${{ steps.pages.outputs.base_path }}/
         run: bun run build:demo
 
-      # CNAME file pins the custom domain. GitHub auto-creates it when
-      # the domain is set in Settings → Pages, but each
-      # actions/deploy-pages run replaces the whole site with the
-      # artifact's contents — without this step that CNAME would be
-      # wiped on every deploy and the custom domain would be unset.
+      # Only pin a custom domain when the repo asks for one. Hardcoding it
+      # made a fork claim an upstream domain and break its own github.io
+      # site. Set the repository variable PAGES_CUSTOM_DOMAIN to opt in.
       - name: Write CNAME for custom domain
-        run: echo 'docs.casualoffice.org' > examples/vite/dist/CNAME
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
+        if: vars.PAGES_CUSTOM_DOMAIN != ''
+        run: echo '${{ vars.PAGES_CUSTOM_DOMAIN }}' > examples/vite/dist/CNAME
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
