@@ -554,7 +554,7 @@ export function App() {
       // URL explicitly. The `/yjs` path is required — that's the
       // Hocuspocus upgrade route on the collab server.
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      backend = `${proto}//${window.location.host}/yjs`;
+      backend = `${proto}//${window.location.host}/yjs?role=edit`;
     }
     // `?kind=text` (or `markdown`) opens the collaborative source/markdown
     // editor instead of the DOCX surface for this room. Default is DOCX.
@@ -582,16 +582,23 @@ export function App() {
     const ws = params.get('collab') || env || params.get('backend');
     if (ws) return ws;
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${proto}//${window.location.host}/yjs`;
+    // `?role=edit` — the collab server treats an ABSENT role as read-only
+    // (collab/src/yjs.ts → anonymousJoinReadOnly): the Hocuspocus socket
+    // then rejects every incoming sync update, so an anonymous join never
+    // propagates a single edit to its peers. The demo's share links are
+    // "open by URL" (see collab/Share.tsx), so they ask for write access.
+    return `${proto}//${window.location.host}/yjs?role=edit`;
   }, []);
-  const collabHttp = useMemo(
-    () =>
-      collabWs
-        .replace(/^wss:/, 'https:')
-        .replace(/^ws:/, 'http:')
-        .replace(/\/yjs\/?$/, ''),
-    [collabWs]
-  );
+  const collabHttp = useMemo(() => {
+    // Drop the query string BEFORE stripping the `/yjs` suffix. The WS URL
+    // may carry `?role=edit` (or a share token); the REST base has to stay
+    // a bare origin or every `/api/rooms/...` call 404s.
+    const [origin] = collabWs.split('?');
+    return origin
+      .replace(/^wss:/, 'https:')
+      .replace(/^ws:/, 'http:')
+      .replace(/\/yjs\/?$/, '');
+  }, [collabWs]);
 
   // Local-user identity for awareness. M2 will prompt for a name +
   // colour; M1 ships an anonymous fallback so co-edit works
