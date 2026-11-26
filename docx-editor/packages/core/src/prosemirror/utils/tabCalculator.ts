@@ -134,15 +134,21 @@ export function computeTabStops(context: TabContext): TabStop[] {
     }
   }
 
-  // Generate default stops at regular intervals
-  // Start from leftIndent and go up to ~10 inches
-  const startPos = maxExplicit > 0 ? Math.max(maxExplicit, leftIndent) : leftIndent;
-  let pos = startPos;
-  const limitPos = leftIndent + 14400; // 14400 twips = 10 inches
+  // Generate the implicit grid.
+  //
+  // Word *suppresses* the default stops up to and including the last explicit
+  // stop — that is why a header with centre/right stops jumps straight to them
+  // instead of landing on the 0.5" defaults first — and resumes the grid at the
+  // first multiple of `defaultTabInterval` strictly after it. Anchoring at 0
+  // (the naive reading of "default distance between tab stops") breaks every
+  // such header; anchoring at `maxExplicit + interval` skips a grid stop when
+  // the last explicit stop is not itself a multiple (400 vs a 420 grid).
+  const anchor = Math.max(maxExplicit, leftIndent);
+  const firstGrid =
+    Math.floor(anchor / defaultTabInterval) * defaultTabInterval + defaultTabInterval;
+  const limitPos = anchor + 14400; // + 10 inches
 
-  while (pos < limitPos) {
-    pos += defaultTabInterval;
-
+  for (let pos = firstGrid; pos < limitPos; pos += defaultTabInterval) {
     // Skip if there's already an explicit stop at this position
     const hasExplicitStop = validExplicitStops.some((s) => Math.abs(s.pos - pos) < 20);
     // Skip if there's a clear stop at this position
