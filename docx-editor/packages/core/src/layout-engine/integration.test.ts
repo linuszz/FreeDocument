@@ -172,6 +172,52 @@ describe('Layout Engine - Page Production', () => {
       expect(layout.pages[0].fragments.length).toBe(3);
     });
 
+    test('a list marker with no hanging indent reserves its own line', () => {
+      // The painter gives a marker with no hanging-indent slot its own row
+      // above the text (Word's tab-suffix wrap). If the paginator doesn't
+      // charge that row, the next paragraph is painted on top of it — the
+      // CJK "第X条" heading overlap on template-618.
+      const heading = makeParagraphBlock(0, '标的物信息、租金支付', 1);
+      heading.attrs = {
+        ...heading.attrs,
+        listMarker: '第1条',
+        indent: { firstLine: 32 },
+      };
+      const body = makeParagraphBlock(1, '出租方根据承租方要求向其提供', 20);
+      const LH = 24;
+      const measures: Measure[] = [
+        makeParagraphMeasure([makeLine(0, 0, 0, 10, 120, LH)]),
+        makeParagraphMeasure([makeLine(0, 0, 0, 12, 120, LH)]),
+      ];
+
+      const layout = layoutDocument([heading, body], measures, makeLayoutOptions());
+      const [headingFrag, bodyFrag] = layout.pages[0].fragments;
+
+      expect(headingFrag.height).toBe(LH * 2);
+      expect(bodyFrag.y).toBeGreaterThanOrEqual(headingFrag.y + LH * 2);
+    });
+
+    test('a list marker inside a hanging indent does not add a row', () => {
+      const heading = makeParagraphBlock(0, '标的物信息、租金支付', 1);
+      heading.attrs = {
+        ...heading.attrs,
+        listMarker: '第1条',
+        indent: { left: 48, hanging: 48 },
+      };
+      const body = makeParagraphBlock(1, '出租方根据承租方要求向其提供', 20);
+      const LH = 24;
+      const measures: Measure[] = [
+        makeParagraphMeasure([makeLine(0, 0, 0, 10, 120, LH)]),
+        makeParagraphMeasure([makeLine(0, 0, 0, 12, 120, LH)]),
+      ];
+
+      const layout = layoutDocument([heading, body], measures, makeLayoutOptions());
+      const [headingFrag, bodyFrag] = layout.pages[0].fragments;
+
+      expect(headingFrag.height).toBe(LH);
+      expect(bodyFrag.y).toBeGreaterThanOrEqual(headingFrag.y + LH);
+    });
+
     test('uses the next section page size and margins after a section break', () => {
       const firstSectionPage = { w: 800, h: 1000 };
       const secondSectionPage = { w: 1000, h: 800 };
