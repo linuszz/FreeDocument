@@ -339,11 +339,7 @@ export function ImagePropertiesSection({
   return (
     <div data-testid="properties-image-section">
       <div style={GROUP_HEADER}>{t('sidebar.imageProperties.textWrapping')}</div>
-      <div
-        style={TILE_GRID}
-        role="group"
-        aria-label={t('sidebar.imageProperties.textWrapping')}
-      >
+      <div style={TILE_GRID} role="group" aria-label={t('sidebar.imageProperties.textWrapping')}>
         {WRAP_OPTIONS.map((o) => {
           const active = wrapType === o.value;
           const label = t(o.labelKey);

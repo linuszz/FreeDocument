@@ -47,7 +47,10 @@ concurrency:
 jobs:
   representative:
     name: Representative corpus floor (>= 80)
-    runs-on: ubuntu-latest
+    # Pinned: `ubuntu-latest` moved to 26.04, which the pinned Playwright
+    # release cannot install Chromium for. Bump once Playwright ships
+    # 26.04 support.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:

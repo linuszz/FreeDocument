@@ -250,7 +250,10 @@ export function StatusBar({
         <>
           <span
             style={cellStyle}
-            aria-label={t('statusBar.pageOf', { current: currentPage ?? 1, total: totalPages ?? 0 })}
+            aria-label={t('statusBar.pageOf', {
+              current: currentPage ?? 1,
+              total: totalPages ?? 0,
+            })}
           >
             {t('statusBar.pageOf', { current: currentPage ?? 1, total: totalPages ?? 0 })}
           </span>

@@ -10369,7 +10369,9 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                                         wordCompat={wordCompat}
                                         readOnly
                                         extensionManager={extensionManager}
-                                        contentLabel={t('sidebar.versionHistory.previewContentLabel')}
+                                        contentLabel={t(
+                                          'sidebar.versionHistory.previewContentLabel'
+                                        )}
                                         scrollContainerRef={previewScrollRef}
                                       />
                                     ) : (
@@ -10391,7 +10393,11 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
 
                             {/* Floating "add comment" button — appears on right edge of page at selection */}
                             {floatingCommentBtn != null && !isAddingComment && !readOnly && (
-                              <Tooltip content={t('formattingBar.addComment')} side="bottom" delayMs={300}>
+                              <Tooltip
+                                content={t('formattingBar.addComment')}
+                                side="bottom"
+                                delayMs={300}
+                              >
                                 <button
                                   type="button"
                                   data-testid="floating-add-comment-button"
@@ -10954,9 +10960,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                         }
                       })
                       .catch((err) => {
-                        toast.error(
-                          t('toast.refineFailed', { message: (err as Error).message })
-                        );
+                        toast.error(t('toast.refineFailed', { message: (err as Error).message }));
                       })
                       .finally(() => setProposalBusy(false));
                   }}
@@ -11013,7 +11017,9 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                           error: null,
                         });
                       })
-                      .catch((err) => toast.error(t('toast.aiRequestFailed', { message: (err as Error).message })))
+                      .catch((err) =>
+                        toast.error(t('toast.aiRequestFailed', { message: (err as Error).message }))
+                      )
                       .finally(() => setAskAiBusy(false));
                     return;
                   }
