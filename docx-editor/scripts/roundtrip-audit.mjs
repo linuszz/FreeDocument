@@ -19,12 +19,13 @@
  */
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import JSZip from 'jszip';
 import { parseDocx } from '../packages/core/src/docx/parser.ts';
 import { serializeDocument } from '../packages/core/src/docx/serializer/documentSerializer.ts';
 
-const FIXTURE_DIR = new URL('../e2e/fixtures', import.meta.url).pathname;
-const REPORT_PATH = new URL('../roundtrip-audit-report.md', import.meta.url).pathname;
+const FIXTURE_DIR = fileURLToPath(new URL('../e2e/fixtures', import.meta.url));
+const REPORT_PATH = fileURLToPath(new URL('../roundtrip-audit-report.md', import.meta.url));
 
 /** Pull every element open-tag from an XML string into a name → count map. */
 function countTags(xml) {
