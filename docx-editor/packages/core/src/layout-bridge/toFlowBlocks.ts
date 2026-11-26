@@ -101,6 +101,12 @@ export type ToFlowBlocksOptions = {
    * multiple ilvls fires each one independently.
    */
   listSeenNumIds?: Set<string>;
+  /**
+   * `w:defaultTabStop` in twips (from `word/settings.xml`). Sets the interval
+   * of the implicit tab stops Word lays between explicit ones. Omitted →
+   * Word's 720-twip default.
+   */
+  defaultTabStop?: number;
 };
 
 const DEFAULT_FONT = 'Calibri';
@@ -1181,6 +1187,9 @@ function convertParagraph(
     options.listCounters,
     options.listSeenNumIds
   );
+  if (options.defaultTabStop && options.defaultTabStop > 0) {
+    attrs.defaultTabStop = options.defaultTabStop;
+  }
 
   return {
     kind: 'paragraph',
@@ -1639,6 +1648,13 @@ export function toFlowBlocks(doc: PMNode, options: ToFlowBlocksOptions = {}): Fl
     defaultFont: options.defaultFont ?? DEFAULT_FONT,
     defaultSize: options.defaultSize ?? DEFAULT_SIZE,
   };
+  // `w:defaultTabStop` travels on the doc node (set by toProseDoc).
+  if (opts.defaultTabStop == null) {
+    const fromDoc = (doc.attrs as { defaultTabStop?: number | null } | undefined)?.defaultTabStop;
+    if (typeof fromDoc === 'number' && fromDoc > 0) {
+      opts.defaultTabStop = fromDoc;
+    }
+  }
 
   const blocks: FlowBlock[] = [];
   const offset = 0; // Start at document beginning

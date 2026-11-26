@@ -943,6 +943,8 @@ interface RenderLineOptions {
   paragraphEndsWithLineBreak: boolean;
   /** Tab stops from paragraph attributes */
   tabStops?: TabStop[];
+  /** `w:defaultTabStop` in twips — interval of the implicit tab grid */
+  defaultTabStop?: number;
   /** Render context for field substitution */
   context?: RenderContext;
   /** Left indent in pixels */
@@ -1147,6 +1149,7 @@ export function renderLine(
     tabContext = {
       explicitStops,
       leftIndent: leftIndentTwips,
+      ...(options?.defaultTabStop ? { defaultTabInterval: options.defaultTabStop } : {}),
     };
   }
 
@@ -1537,6 +1540,7 @@ export function renderParagraphFragment(
       isFirstLine,
       paragraphEndsWithLineBreak,
       tabStops: block.attrs?.tabs,
+      defaultTabStop: block.attrs?.defaultTabStop,
       leftIndentPx: indentLeft,
       firstLineIndentPx: isFirstLine ? firstLineIndentPx : 0,
       context,
@@ -1663,6 +1667,9 @@ export function renderParagraphFragment(
         const tabContext: TabContext = {
           explicitStops: block.attrs?.tabs?.map(convertTabStopToCalc),
           leftIndent: Math.round(indentLeft * 15),
+          ...(block.attrs?.defaultTabStop
+            ? { defaultTabInterval: block.attrs.defaultTabStop }
+            : {}),
         };
         const tab = calculateTabWidth(markerPos + markerWidth, tabContext);
         marker.style.minWidth = `${markerWidth + tab.width}px`;

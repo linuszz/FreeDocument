@@ -35,6 +35,7 @@ import type {
   StyleDefinitions,
 } from '../types/document';
 import { unzipDocx, getMediaMimeType, type RawDocxContent } from './unzip';
+import { parseSettings } from './settingsParser';
 import { parseRelationships, RELATIONSHIP_TYPES } from './relsParser';
 import { parseTheme } from './themeParser';
 import { parseStyles, parseStyleDefinitions, type StyleMap } from './styleParser';
@@ -302,6 +303,7 @@ export async function parseDocx(input: DocxInput, options: ParseOptions = {}): P
 
     const document: Document = {
       package: pkg,
+      settings: parseSettings(raw.settingsXml),
       originalBuffer: buffer,
       templateVariables,
       warnings: warnings.length > 0 ? warnings : undefined,

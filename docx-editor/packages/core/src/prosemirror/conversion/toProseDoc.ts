@@ -139,7 +139,13 @@ export function toProseDoc(document: Document, options?: ToProseDocOptions): PMN
     nodes.push(schema.node('paragraph', {}, []));
   }
 
-  return schema.node('doc', null, nodes);
+  return schema.node(
+    'doc',
+    // Layout reads this for the implicit tab grid (w:defaultTabStop). It is
+    // client-side only and never written back to the DOCX.
+    { defaultTabStop: document.settings?.defaultTabStop ?? null },
+    nodes
+  );
 }
 
 /**
