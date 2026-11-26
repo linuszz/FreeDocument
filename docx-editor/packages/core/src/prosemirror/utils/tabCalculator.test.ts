@@ -145,6 +145,29 @@ describe('calculateTabWidth', () => {
     expect(Math.abs(result.width - expectedWidth)).toBeLessThan(1);
   });
 
+  it('suppresses default stops before the last explicit stop', () => {
+    // Word clears the defaults to the left of a custom stop, which is why a
+    // header with centre/right stops jumps straight to them.
+    const result = calculateTabWidth(0, { explicitStops: [{ val: 'center', pos: 1000 }] });
+
+    expect(result.alignment).toBe('center');
+    expect(result.width).toBeGreaterThan(twipsToPixels(1000) - 1);
+  });
+
+  it('resumes the grid at the next multiple after the last explicit stop', () => {
+    // The template-618 shape: an explicit stop at 480 with a 420 grid. The
+    // next implicit stop is 840 (a grid multiple), not 480 + 420 = 900.
+    const stops = computeTabStops({
+      explicitStops: [{ val: 'start', pos: 480 }],
+      defaultTabInterval: 420,
+    }).map((s) => s.pos);
+
+    expect(stops).toContain(480);
+    expect(stops).toContain(840);
+    expect(stops).not.toContain(900);
+    expect(stops.filter((p) => p > 480 && p < 840)).toEqual([]);
+  });
+
   it('returns fallback when width would be too small', () => {
     // When tab width calculates to less than 1, should use fallback
     const result = calculateTabWidth(twipsToPixels(719), {}); // Just before 720

@@ -168,6 +168,12 @@ import type { StyleDefinitions, Theme, FontTable, RelationshipMap, MediaFile } f
 import type { NumberingDefinitions } from './lists';
 import type { Footnote, Endnote, HeaderFooter } from './content';
 
+/** Document-wide layout settings parsed from `word/settings.xml`. */
+export interface DocumentSettings {
+  /** `w:defaultTabStop/@w:val` in twips — the implicit tab-stop interval. */
+  defaultTabStop?: number;
+}
+
 /**
  * Complete DOCX package structure
  */
@@ -214,6 +220,8 @@ export interface DocxPackage {
 export interface Document {
   /** DOCX package with all parsed content */
   package: DocxPackage;
+  /** Document-wide settings (word/settings.xml) that affect layout. */
+  settings?: DocumentSettings;
   /** Original ArrayBuffer for round-trip */
   originalBuffer?: ArrayBuffer;
   /** Detected template variables ({{...}}) */

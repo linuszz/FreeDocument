@@ -308,6 +308,11 @@ export type ParagraphAttrs = {
   borders?: ParagraphBorders;
   shading?: string; // CSS background color
   tabs?: TabStop[]; // Custom tab stops
+  /**
+   * `w:defaultTabStop` in twips — the interval of Word's implicit tab stops.
+   * Document-wide; copied onto every paragraph by toFlowBlocks.
+   */
+  defaultTabStop?: number;
   // List properties
   numPr?: ListNumPr;
   listMarker?: string; // Pre-computed marker text (e.g., "1.", "•", "a)")

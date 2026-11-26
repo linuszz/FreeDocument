@@ -13,5 +13,10 @@ export const DocExtension = createNodeExtension({
   schemaNodeName: 'doc',
   nodeSpec: {
     content: '(paragraph | horizontalRule | pageBreak | table | textBox)+',
+    attrs: {
+      // `w:defaultTabStop` (twips) from the source document. Layout-only;
+      // never serialized back into the DOCX.
+      defaultTabStop: { default: null },
+    },
   },
 });
