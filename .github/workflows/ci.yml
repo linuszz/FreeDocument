@@ -91,7 +91,11 @@ jobs:
 
   e2e:
     name: Playwright e2e (shard ${{ matrix.shard }} / 4)
-    runs-on: ubuntu-latest
+    # Pinned: `ubuntu-latest` moved to 26.04, which the pinned Playwright
+    # release cannot install Chromium for ("Playwright does not support
+    # chromium on ubuntu26.04-x64"). Bump this once Playwright ships
+    # 26.04 support.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     # Sharded matrix — Playwright's `--shard N/M` splits the test files
     # deterministically across N parallel jobs. Each shard runs four
