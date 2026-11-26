@@ -34,6 +34,7 @@ import {
 
 import { DEFAULT_SINGLE_LINE_RATIO } from '../../utils/fontResolver';
 import { adjustKinsokuBreak, isLineStartForbidden } from './kinsoku';
+import { markerNeedsOwnLine } from '../../layout-engine/listMarker';
 
 // Default values - match OOXML spec defaults
 const DEFAULT_FONT_SIZE = 11; // 11pt (Word 2007+ default)
@@ -942,14 +943,25 @@ export function measureParagraph(
   // Calculate total height
   let totalHeight = lines.reduce((sum, line) => sum + line.lineHeight, 0);
 
-  // The renderer wraps a list marker in its own line element when there is no
-  // hanging indent reserved for it (matching Word's <w:suff w:val="tab"/>
-  // wrap, see renderParagraph.ts). Account for that extra row here so the
-  // paragraph reports the correct height to its container.
-  const hasOwnLineMarker =
-    !!attrs?.listMarker && !attrs?.listMarkerHidden && (indent?.hanging ?? 0) === 0;
-  if (hasOwnLineMarker && lines.length > 0) {
-    totalHeight += lines[0].lineHeight;
+  // A list marker normally shares the first line with the text (Word's default
+  // `w:suff="tab"`), but it drops onto its own row when it cannot fit — that
+  // row is real flow height, so the container has to charge for it. Decide it
+  // once here; the paginator and the painter both read `listMarkerOwnLine`.
+  let listMarkerOwnLine = false;
+  if (attrs?.listMarker && !attrs.listMarkerHidden && lines.length > 0) {
+    const hanging = indent?.hanging ?? 0;
+    const markerX = Math.max(0, indentLeft - hanging);
+    const firstTextRun = block.runs.find((r): r is TextRun => r.kind === 'text');
+    const markerStyle: FontStyle = {
+      fontFamily: attrs.listMarkerFontFamily ?? firstTextRun?.fontFamily ?? attrs.defaultFontFamily,
+      fontSize: attrs.listMarkerFontSize ?? firstTextRun?.fontSize ?? attrs.defaultFontSize,
+    };
+    const markerWidth = measureTextWidth(attrs.listMarker, markerStyle);
+    const availableWidth = maxWidth - indentLeft - indentRight;
+    listMarkerOwnLine = markerNeedsOwnLine(markerX, markerWidth, availableWidth);
+    if (listMarkerOwnLine) {
+      totalHeight += lines[0].lineHeight;
+    }
   }
 
   // Add spacing before/after
@@ -965,6 +977,7 @@ export function measureParagraph(
     kind: 'paragraph',
     lines,
     totalHeight: totalWithSpacing,
+    ...(listMarkerOwnLine ? { listMarkerOwnLine: true } : {}),
   };
 }
 

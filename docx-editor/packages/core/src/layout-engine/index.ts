@@ -543,17 +543,12 @@ function layoutParagraph(
   const spaceBefore = getSpacingBefore(block);
   const spaceAfter = getSpacingAfter(block);
 
-  // A list marker with no hanging indent slot gets its own painted row above
-  // the text (renderParagraph.ts mirrors Word's tab-suffix wrap), and
-  // measureParagraph.totalHeight already charges that row to the paragraph.
-  // The line loop below only sums `lines[]`, so reserve the row here too —
-  // otherwise the fragment is one line short and every following block is
-  // painted on top of it (CJK "第X条" headings, template-618).
-  const hasOwnLineMarker =
-    !!block.attrs?.listMarker &&
-    !block.attrs?.listMarkerHidden &&
-    (block.attrs?.indent?.hanging ?? 0) === 0;
-  const markerLineHeight = hasOwnLineMarker ? lines[0].lineHeight : 0;
+  // A list marker that could not fit on the first line is painted on its own
+  // row above the text (see measureParagraph / listMarker.ts). The line loop
+  // below only sums `lines[]`, so reserve that row here too — otherwise the
+  // fragment is one line short and every following block is painted on top of
+  // it (CJK "第X条" headings, template-618).
+  const markerLineHeight = measure.listMarkerOwnLine ? lines[0].lineHeight : 0;
 
   // Try to fit all lines on current page/column
   let currentLineIndex = 0;
