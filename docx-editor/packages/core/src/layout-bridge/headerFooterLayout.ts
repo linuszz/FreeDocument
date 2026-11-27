@@ -28,11 +28,13 @@ import type {
   PageMargins,
   TableBlock,
   TextBoxBlock,
+  TextBoxMeasure,
 } from '../layout-engine/types';
 import type { HeaderFooter, StyleDefinitions, Theme } from '../types/document';
 import type { HeaderFooterContent } from '../layout-painter/renderPage';
 import { headerFooterToProseDoc } from '../prosemirror/conversion/toProseDoc';
-import { emuToPixels } from '../utils/units';
+import { emuToPixels, pixelsToEmu } from '../utils/units';
+import { resolveAnchorX, type AnchorGeometry } from '../layout-engine/anchorGeometry';
 import { toFlowBlocks } from './toFlowBlocks';
 import type { MeasureBlocksFn } from './footnoteLayout';
 
@@ -216,11 +218,102 @@ export function resolveHeaderFooterVisualTop(
 }
 
 /** True when a header/footer textbox is floated by an anchor (don't stack it). */
-function isAnchoredTextBox(block: TextBoxBlock): boolean {
+export function isAnchoredTextBox(block: TextBoxBlock): boolean {
   const a = block.anchor;
   return (
     !!a && (a.offsetH != null || a.offsetV != null || a.relFromH != null || a.relFromV != null)
   );
+}
+
+/**
+ * True for blocks that float in a header/footer: anchored textboxes are
+ * positioned absolutely and are NOT part of the header/footer flow.
+ *
+ * Word sizes a header/footer band from its flow text only — a floating shape
+ * may paint above or below that band, but it never grows the band (and never
+ * pushes the body away). Counting these made template-613's footer 144pt tall
+ * (the height of an empty 2in frame) instead of one 9pt line, so the page
+ * number rendered ~130pt too high.
+ */
+export function isFloatingHeaderFooterBlock(block: FlowBlock): boolean {
+  return block.kind === 'textBox' && isAnchoredTextBox(block as TextBoxBlock);
+}
+
+/**
+ * Header/footer flow height: the stacked heights of the in-flow blocks.
+ * Floated blocks are skipped — see {@link isFloatingHeaderFooterBlock}.
+ */
+export function calculateHeaderFooterFlowHeight(blocks: FlowBlock[], measures: Measure[]): number {
+  let height = 0;
+  for (let i = 0; i < blocks.length; i++) {
+    const measure = measures[i];
+    if (!measure) continue;
+    if (isFloatingHeaderFooterBlock(blocks[i])) continue;
+    if (measure.kind === 'paragraph') height += measure.totalHeight;
+    else if (measure.kind === 'table') height += measure.totalHeight;
+    else if (measure.kind === 'image') height += measure.height;
+    else if (measure.kind === 'textBox') height += measure.height;
+  }
+  return height;
+}
+
+/** Anchor geometry for header/footer content, which is inset by the margins. */
+function headerFooterAnchorGeometry(
+  metrics: HeaderFooterMetrics,
+  contentWidth: number
+): AnchorGeometry {
+  return {
+    pageWidth: metrics.pageSize.w,
+    pageHeight: metrics.pageSize.h,
+    marginLeft: metrics.margins.left,
+    marginTop: metrics.margins.top,
+    contentWidth,
+    contentHeight: metrics.pageSize.h - metrics.margins.top - metrics.margins.bottom,
+  };
+}
+
+/**
+ * Width a floating textbox should use for `align` positioning.
+ *
+ * An invisible frame (no fill, no outline) is a *text-fitting* frame in Word /
+ * WPS — the same shape's VML fallback spells this out with
+ * `mso-fit-shape-to-text:t`, and template-613's PDF confirms it: the nominal
+ * 2in box is horizontally centred in the margin, yet the 9pt line lands dead
+ * centre on the page, i.e. the aligned object is the text, not the frame.
+ * For a visible frame the box itself is the aligned object, so keep its width.
+ */
+export function resolveHeaderFooterTextBoxAlignWidth(
+  block: TextBoxBlock,
+  measure: TextBoxMeasure
+): number {
+  if (!block.anchor?.alignH) return measure.width;
+  const invisible = !block.fillColor && !((block.outlineWidth ?? 0) > 0);
+  if (!invisible) return measure.width;
+  let contentWidth = 0;
+  for (const inner of measure.innerMeasures) {
+    for (const line of inner.lines) contentWidth = Math.max(contentWidth, line.width);
+  }
+  return contentWidth > 0 ? contentWidth : measure.width;
+}
+
+/** Header/footer flow-X (content-area-relative) of an anchored textbox. */
+export function resolveHeaderFooterTextBoxLeft(
+  anchor: NonNullable<TextBoxBlock['anchor']>,
+  metrics: HeaderFooterMetrics,
+  contentWidth: number,
+  boxWidth: number
+): number {
+  // Anchor offsets are pixels (converted once in toProseDoc); resolveAnchorX
+  // takes EMU, so round-trip like the body's anchored-textbox path does.
+  return resolveAnchorX(
+    {
+      relativeTo: anchor.relFromH,
+      align: anchor.alignH,
+      posOffset: anchor.offsetH != null ? pixelsToEmu(anchor.offsetH) : undefined,
+    },
+    boxWidth,
+    headerFooterAnchorGeometry(metrics, contentWidth)
+  ).x;
 }
 
 /**
@@ -241,20 +334,6 @@ export function resolveHeaderFooterTextBoxTop(
   if (anchor.relFromV === 'margin' && offsetPx != null)
     return metrics.margins.top + offsetPx - flowTop;
   return offsetPx ?? 0;
-}
-
-/** Header/footer flow-X (content-area-relative) of an anchored textbox. */
-export function resolveHeaderFooterTextBoxLeft(
-  anchor: NonNullable<TextBoxBlock['anchor']>,
-  metrics: HeaderFooterMetrics
-): number {
-  const offsetPx = anchor.offsetH;
-  if (offsetPx == null) return 0;
-  // Header content box is inset by margins.left, so a page-relative offset
-  // becomes content-relative by subtracting the left margin; margin/column
-  // relative offsets are already content-relative.
-  if (anchor.relFromH === 'page') return offsetPx - metrics.margins.left;
-  return offsetPx;
 }
 
 export function calculateHeaderFooterVisualBounds(
@@ -297,19 +376,14 @@ export function calculateHeaderFooterVisualBounds(
       visualBottom = Math.max(visualBottom, blockBottomY);
       cursorY = blockBottomY;
     } else if (block.kind === 'textBox' && measure.kind === 'textBox') {
-      if (isAnchoredTextBox(block as TextBoxBlock)) {
-        // Floated (anchored) — contributes its ABSOLUTE extent to the bounds
-        // but does NOT take flow space. Stacking these (the old behavior) summed
-        // all heights, inflating the header so the top margin expanded and the
-        // body was pushed onto extra pages.
-        const top = resolveHeaderFooterTextBoxTop(
-          (block as TextBoxBlock).anchor!,
-          flowHeight,
-          metrics
-        );
-        visualTop = Math.min(visualTop, top);
-        visualBottom = Math.max(visualBottom, top + measure.height);
-      } else {
+      // Floated (anchored) textboxes take no flow space and do not contribute to
+      // the band: Word sizes a header/footer from its flow text only, and the
+      // shape paints at its anchor (possibly overflowing the band). Counting the
+      // frame's full extent made template-613's one-line footer 144pt tall —
+      // the height of its empty 2in text frame — and pushed the page number
+      // ~130pt up the page. The painter positions these absolutely, so they
+      // still render.
+      if (!isAnchoredTextBox(block as TextBoxBlock)) {
         const blockBottomY = cursorY + measure.height;
         visualTop = Math.min(visualTop, cursorY);
         visualBottom = Math.max(visualBottom, blockBottomY);
@@ -358,13 +432,9 @@ export function convertHeaderFooterToContent(
 
   const blocksForMeasure = normalizeHeaderFooterMeasureBlocks(blocks);
   const measures = options.measureBlocks(blocksForMeasure, contentWidth);
-  const totalHeight = measures.reduce((h, m) => {
-    if (m.kind === 'paragraph') return h + m.totalHeight;
-    if (m.kind === 'table') return h + m.totalHeight;
-    if (m.kind === 'image') return h + m.height;
-    if (m.kind === 'textBox') return h + m.height;
-    return h;
-  }, 0);
+  // Flow height only — floated textboxes are positioned absolutely and do not
+  // size the band (see isFloatingHeaderFooterBlock).
+  const totalHeight = calculateHeaderFooterFlowHeight(blocksForMeasure, measures);
   const { visualTop, visualBottom } = calculateHeaderFooterVisualBounds(
     blocks,
     measures,

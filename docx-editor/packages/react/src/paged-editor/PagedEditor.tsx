@@ -100,6 +100,7 @@ import {
   setParagraphCacheSize,
   type FloatingImageZone,
   resolveTableWidthPx,
+  resolveTableOuterWidthPx,
   countTableColumns,
   normalizeTableColumnWidths,
 } from '@eigenpal/docx-core/layout-bridge';
@@ -867,7 +868,20 @@ export function measureTableBlock(tableBlock: TableBlock, contentWidth: number):
 
   // columnWidths are already in pixels (converted in toFlowBlocks)
   let columnWidths = tableBlock.columnWidths ?? [];
-  const explicitWidthPx = resolveTableWidthPx(tableBlock.width, tableBlock.widthType, contentWidth);
+  // Word's percentage table width describes the cells' content area, so the
+  // outer width adds the two outer cell margins (borders hang into the page
+  // margins) — see resolveTableOuterWidthPx.
+  const firstRow = tableBlock.rows[0];
+  const cellMarginLeft = firstRow?.cells[0]?.padding?.left ?? DEFAULT_CELL_PADDING_X;
+  const cellMarginRight =
+    firstRow?.cells[firstRow.cells.length - 1]?.padding?.right ?? DEFAULT_CELL_PADDING_X;
+  const explicitWidthPx = resolveTableOuterWidthPx(
+    tableBlock.width,
+    tableBlock.widthType,
+    contentWidth,
+    cellMarginLeft,
+    cellMarginRight
+  );
   const colCount = countTableColumns(tableBlock);
   const targetWidth = explicitWidthPx ?? contentWidth;
 

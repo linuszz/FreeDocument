@@ -2008,17 +2008,24 @@ function convertShape(shape: Shape): PMNode {
 
 /**
  * Convert a paragraph block to PM nodes, extracting text boxes as sibling nodes.
- * Skips ghost empty paragraphs that only contained text box drawings.
+ *
+ * A paragraph whose only content was a text-box drawing is normally dropped
+ * ("ghost" paragraph) so body text doesn't gain a blank line. Headers/footers
+ * keep it: Word sizes the header/footer band from the flow paragraphs, and the
+ * floating shape is anchored to that paragraph's top. Dropping it collapsed
+ * template-613's one-line footer to a zero-height band, which pushed the page
+ * number to the footer distance instead of one line above it.
  */
 function convertParagraphWithTextBoxes(
   block: Paragraph,
-  styleResolver: StyleResolver | null
+  styleResolver: StyleResolver | null,
+  keepEmptyAnchorParagraph = false
 ): PMNode[] {
   const textBoxes = extractTextBoxesFromParagraph(block);
   const pmParagraph = convertParagraph(block, styleResolver);
   const nodes: PMNode[] = [];
   const isEmptyAfterExtraction = textBoxes.length > 0 && pmParagraph.content.size === 0;
-  if (!isEmptyAfterExtraction) {
+  if (!isEmptyAfterExtraction || (keepEmptyAnchorParagraph && textBoxes.length > 0)) {
     nodes.push(pmParagraph);
   }
   for (const tb of textBoxes) {
@@ -2176,7 +2183,9 @@ export function headerFooterToProseDoc(
 
   for (const block of content) {
     if (block.type === 'paragraph') {
-      nodes.push(...convertParagraphWithTextBoxes(block, styleResolver));
+      nodes.push(
+        ...convertParagraphWithTextBoxes(block, styleResolver, /* keepEmptyAnchorParagraph */ true)
+      );
     } else if (block.type === 'table') {
       nodes.push(convertTable(block, styleResolver, theme));
     }

@@ -70,6 +70,36 @@ describe('trailing spaces', () => {
 
     expect(measure.lines.length).toBe(1);
   });
+
+  test('a space run that overflows before a line break hangs instead of wrapping', () => {
+    // template-395's 法定代表人/地址 field paragraph:
+    //   "法定代表人：" + 48-space blank + 8 more spaces + <w:br/> + "地址：" + blank
+    // Word hangs the 8 overflow spaces at the end of the line, so the break puts
+    // 地址 on the very next line. Wrapping them produced a blank line before
+    // every field — two per page — and an extra page in the exported PDF.
+    const label = '法定代表人：';
+    const block: ParagraphBlock = {
+      kind: 'paragraph',
+      id: 0,
+      runs: [
+        { kind: 'text', text: label, pmStart: 1, pmEnd: 1 + label.length },
+        { kind: 'text', text: ' '.repeat(20), pmStart: 20, pmEnd: 40 },
+        { kind: 'text', text: ' '.repeat(8), pmStart: 40, pmEnd: 48 },
+        { kind: 'lineBreak', pmStart: 48, pmEnd: 49 },
+        { kind: 'text', text: '地址：', pmStart: 49, pmEnd: 52 },
+      ],
+      attrs: { defaultFontSize: 12, defaultFontFamily: DEFAULT_FONT_FAMILY },
+      pmStart: 0,
+      pmEnd: 53,
+    } as ParagraphBlock;
+
+    // 7 chars * 8px = 56px of label, then 28 spaces = 224px against 200px.
+    const measure = measureParagraph(block, 200);
+
+    expect(measure.lines.length).toBe(2);
+    // The overhanging spaces stay on the first line.
+    expect(measure.lines[0].width).toBeGreaterThan(200);
+  });
 });
 
 describe('line grid', () => {
