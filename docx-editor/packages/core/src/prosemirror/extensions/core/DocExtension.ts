@@ -17,6 +17,9 @@ export const DocExtension = createNodeExtension({
       // `w:defaultTabStop` (twips) from the source document. Layout-only;
       // never serialized back into the DOCX.
       defaultTabStop: { default: null },
+      // `w:docGrid/@w:linePitch` (twips) of the body section — the base Word
+      // uses for `lineRule="auto"` spacing in grid documents. Layout-only.
+      docGridLinePitch: { default: null },
     },
   },
 });

@@ -172,6 +172,11 @@ import type { Footnote, Endnote, HeaderFooter } from './content';
 export interface DocumentSettings {
   /** `w:defaultTabStop/@w:val` in twips — the implicit tab-stop interval. */
   defaultTabStop?: number;
+  /**
+   * `w:docGrid/@w:linePitch` of the body section in twips. When a line grid is
+   * defined, Word uses it as the base of `lineRule="auto"` line spacing.
+   */
+  docGridLinePitch?: number;
 }
 
 /**

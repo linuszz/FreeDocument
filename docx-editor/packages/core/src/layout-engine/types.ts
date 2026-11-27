@@ -313,6 +313,11 @@ export type ParagraphAttrs = {
    * Document-wide; copied onto every paragraph by toFlowBlocks.
    */
   defaultTabStop?: number;
+  /**
+   * `w:docGrid/@w:linePitch` in twips — the line grid Word uses as the base of
+   * `lineRule="auto"` spacing. Document-wide; copied onto every paragraph.
+   */
+  docGridLinePitch?: number;
   // List properties
   numPr?: ListNumPr;
   listMarker?: string; // Pre-computed marker text (e.g., "1.", "•", "a)")

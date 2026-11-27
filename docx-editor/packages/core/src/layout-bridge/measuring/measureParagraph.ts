@@ -233,7 +233,8 @@ function runToFontStyle(run: TextRun | TabRun): FontStyle {
 function calculateTypographyMetrics(
   fontSize: number,
   spacing?: ParagraphSpacing,
-  metrics?: FontMetrics | null
+  metrics?: FontMetrics | null,
+  docGridLinePitchPx?: number
 ): LineTypography {
   // Use provided metrics or calculate from font size
   // When calculating from fontSize (points), convert to pixels first
@@ -252,8 +253,13 @@ function calculateTypographyMetrics(
   // lookup table of OS/2 metrics since Canvas fontBoundingBox is unreliable
   // cross-platform (Mac uses hhea, not usWin) and Google Font substitutes
   // report different metrics than the original fonts.
+  //
+  // When the document defines a line grid (`w:docGrid/@linePitch`), Word uses
+  // THAT as the single-line base instead: template-395's 400/240 on a 312-twip
+  // grid renders at 1.667 × 15.6pt = 26.0pt for 10.5pt SimSun, which its
+  // Word/WPS PDF confirms. Font metrics alone come out 23% shorter there.
   const ratio = metrics?.singleLineRatio ?? DEFAULT_SINGLE_LINE_RATIO;
-  const singleLineBase = fontSizePx * ratio;
+  const singleLineBase = docGridLinePitchPx ?? fontSizePx * ratio;
 
   let lineHeight: number;
 
@@ -305,10 +311,11 @@ function isWhitespaceOnlyLine(block: ParagraphBlock, line: MeasuredLine): boolea
 function calculateEmptyParagraphMetrics(
   fontSize: number,
   spacing?: ParagraphSpacing,
-  fontFamily?: string
+  fontFamily?: string,
+  docGridLinePitchPx?: number
 ): LineTypography {
-  const metrics = getFontMetrics({ fontSize, fontFamily: fontFamily ?? DEFAULT_FONT_FAMILY });
-  const result = calculateTypographyMetrics(fontSize, spacing, metrics);
+  const metrics = getFontMetrics({ fontSize, fontFamily: fontFamily || DEFAULT_FONT_FAMILY });
+  const result = calculateTypographyMetrics(fontSize, spacing, metrics, docGridLinePitchPx);
 
   // Empty paragraphs render at the font's natural single-line height even when
   // the doc writes a smaller `line` value (e.g. an exact/atLeast value below the
@@ -444,6 +451,9 @@ export function measureParagraph(
   const runs = block.runs;
   const attrs = block.attrs;
   const spacing = attrs?.spacing;
+  const docGridLinePitchPx = attrs?.docGridLinePitch
+    ? twipsToPx(attrs.docGridLinePitch)
+    : undefined;
 
   // Floating image support
   const floatingZones = options?.floatingZones;
@@ -514,7 +524,12 @@ export function measureParagraph(
 
     const emptyFontSize = attrs?.defaultFontSize ?? DEFAULT_FONT_SIZE;
     const emptyFontFamily = attrs?.defaultFontFamily ?? DEFAULT_FONT_FAMILY;
-    const emptyMetrics = calculateEmptyParagraphMetrics(emptyFontSize, spacing, emptyFontFamily);
+    const emptyMetrics = calculateEmptyParagraphMetrics(
+      emptyFontSize,
+      spacing,
+      emptyFontFamily,
+      docGridLinePitchPx
+    );
     lines.push({
       fromRun: 0,
       fromChar: 0,
@@ -545,7 +560,12 @@ export function measureParagraph(
     const run = runs[0] as TextRun;
     const fontSize = run.fontSize ?? attrs?.defaultFontSize ?? DEFAULT_FONT_SIZE;
     const fontFamily = run.fontFamily ?? attrs?.defaultFontFamily ?? DEFAULT_FONT_FAMILY;
-    const emptyMetrics = calculateEmptyParagraphMetrics(fontSize, spacing, fontFamily);
+    const emptyMetrics = calculateEmptyParagraphMetrics(
+      fontSize,
+      spacing,
+      fontFamily,
+      docGridLinePitchPx
+    );
 
     lines.push({
       fromRun: 0,
@@ -589,7 +609,8 @@ export function measureParagraph(
     const typography = calculateTypographyMetrics(
       currentLine.maxFontSize,
       spacing,
-      currentLine.maxFontMetrics
+      currentLine.maxFontMetrics,
+      docGridLinePitchPx
     );
 
     // If an inline image is taller than the text-based line height, the line

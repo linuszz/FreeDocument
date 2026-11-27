@@ -14,7 +14,12 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { parseSettings, resolveDefaultTabStop, DEFAULT_TAB_STOP_TWIPS } from '../settingsParser';
+import {
+  parseSettings,
+  parseDocGridLinePitch,
+  resolveDefaultTabStop,
+  DEFAULT_TAB_STOP_TWIPS,
+} from '../settingsParser';
 import { toProseDoc } from '../../prosemirror/conversion/toProseDoc';
 import { toFlowBlocks } from '../../layout-bridge/toFlowBlocks';
 import type { Document, Paragraph } from '../../types/document';
@@ -53,6 +58,27 @@ describe('parseSettings', () => {
     expect(resolveDefaultTabStop(undefined)).toBe(DEFAULT_TAB_STOP_TWIPS);
     expect(resolveDefaultTabStop({})).toBe(DEFAULT_TAB_STOP_TWIPS);
     expect(resolveDefaultTabStop({ defaultTabStop: 420 })).toBe(420);
+  });
+});
+
+describe('parseDocGridLinePitch', () => {
+  test('reads the body section line pitch', () => {
+    const doc =
+      '<w:sectPr><w:docGrid w:type="lines" w:linePitch="312" w:charSpace="0"/></w:sectPr>';
+    expect(parseDocGridLinePitch(doc)).toBe(312);
+  });
+
+  test('uses the last grid when several sections declare one', () => {
+    const doc =
+      '<w:docGrid w:type="lines" w:linePitch="200"/>' +
+      '<w:docGrid w:type="lines" w:linePitch="312"/>';
+    expect(parseDocGridLinePitch(doc)).toBe(312);
+  });
+
+  test('ignores a grid that is not a line grid', () => {
+    expect(parseDocGridLinePitch('<w:docGrid w:type="none" w:linePitch="312"/>')).toBeUndefined();
+    expect(parseDocGridLinePitch('<w:docGrid/>')).toBeUndefined();
+    expect(parseDocGridLinePitch(null)).toBeUndefined();
   });
 });
 
