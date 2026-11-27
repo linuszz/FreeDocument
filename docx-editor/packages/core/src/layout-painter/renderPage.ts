@@ -45,6 +45,11 @@ import { borderToStyle } from '../utils/formatToStyle';
 import type { Theme } from '../types/document';
 import { measureParagraph, type FloatingImageZone } from '../layout-bridge/measuring';
 import { resolveFontFamily } from '../utils/fontResolver';
+import {
+  isAnchoredTextBox,
+  resolveHeaderFooterTextBoxAlignWidth,
+  resolveHeaderFooterTextBoxLeft,
+} from '../layout-bridge/headerFooterLayout';
 import { isFloatingWrapType, isWrapNone, wrapsAroundText } from '../docx/wrapTypes';
 import { pointsToPixels, twipsToPixels } from '../utils/units';
 
@@ -1137,8 +1142,7 @@ function renderHeaderFooterContent(
       const tbBlock = block as TextBoxBlock;
       const tbMeasure = measure as TextBoxMeasure;
       const a = tbBlock.anchor;
-      const anchored =
-        !!a && (a.offsetH != null || a.offsetV != null || a.relFromH != null || a.relFromV != null);
+      const anchored = isAnchoredTextBox(tbBlock);
 
       // Anchored (floating) header/footer textboxes are positioned absolutely
       // from their page/margin offset — mapped into the header content box,
@@ -1158,9 +1162,19 @@ function renderHeaderFooterContent(
         // the same spot regardless of its declared position (#chinese-sds
         // header repro: title/subtitle and product-code/version boxes both
         // landed at the same Y and visually overlapped).
-        const offH = a!.offsetH ?? 0;
         const offV = a!.offsetV ?? 0;
-        tbLeft = a!.relFromH === 'page' ? offH - layout.margins.left : offH;
+        tbLeft = resolveHeaderFooterTextBoxLeft(
+          a!,
+          {
+            section: context.section === 'header' ? 'header' : 'footer',
+            pageSize: { w: layout.pageWidth, h: layout.pageHeight },
+            margins: layout.margins,
+          },
+          layout.contentWidth,
+          // Invisible frames are Word/WPS text-fitting frames: `wp:align`
+          // aligns the visible text, not the nominal 2in box.
+          resolveHeaderFooterTextBoxAlignWidth(tbBlock, tbMeasure)
+        );
         if (a!.relFromV === 'page') tbTop = offV - layout.flowTop;
         else if (a!.relFromV === 'margin') tbTop = layout.margins.top + offV - layout.flowTop;
         else tbTop = offV;
@@ -1761,6 +1775,11 @@ export function renderPage(
       if (headerContentEl.querySelector('img')) {
         shouldClipHeader = false;
       }
+      // Floated textboxes are absolutely positioned by their anchor and can
+      // paint outside the flow band — same as media above.
+      if (headerContentEl.querySelector('.layout-textbox-anchored')) {
+        shouldClipHeader = false;
+      }
       headerEl.appendChild(headerContentEl);
     }
     if (shouldClipHeader) {
@@ -1779,6 +1798,11 @@ export function renderPage(
     const footerVisualTop = options.footerContent?.visualTop ?? 0;
     const footerVisualBottom =
       options.footerContent?.visualBottom ?? options.footerContent?.height ?? 0;
+    // Word anchors the footer by its FLOW height: the flow box's bottom sits at
+    // `footerDistance` from the page edge, and floated shapes may paint below
+    // it. Sizing/positioning by the visual extent (which used to include a 2in
+    // floating frame) lifted the whole footer off the bottom of the page.
+    const footerFlowHeight = options.footerContent?.height ?? 0;
     const actualFooterHeight = Math.max(footerVisualBottom - footerVisualTop, 24);
     const footerOverflows = actualFooterHeight > availableFooterHeight;
 
@@ -1786,7 +1810,7 @@ export function renderPage(
     footerEl.className = PAGE_CLASS_NAMES.footer;
     footerEl.title = 'Double-click to edit footer';
     footerEl.style.position = 'absolute';
-    footerEl.style.top = `${page.size.h - footerDistance - actualFooterHeight}px`;
+    footerEl.style.top = `${page.size.h - footerDistance - footerFlowHeight + footerVisualTop}px`;
     footerEl.style.left = `${page.margins.left}px`;
     footerEl.style.right = `${page.margins.right}px`;
     footerEl.style.width = `${footerContentWidth}px`;
@@ -1810,6 +1834,11 @@ export function renderPage(
       );
       footerContentEl.style.top = `${-footerVisualTop}px`;
       if (footerContentEl.querySelector('img')) {
+        shouldClipFooter = false;
+      }
+      // Floated textboxes paint outside the flow band (Word lets them overflow
+      // the footer area); clipping would hide them entirely.
+      if (footerContentEl.querySelector('.layout-textbox-anchored')) {
         shouldClipFooter = false;
       }
       footerEl.appendChild(footerContentEl);

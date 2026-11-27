@@ -198,6 +198,13 @@ interface LineState {
   maxFontMetrics: FontMetrics | null;
   /** Maximum inline image height in pixels (already in px, not points) */
   maxImageHeightPx: number;
+  /**
+   * True once the line holds something other than whitespace. A run of spaces
+   * that overflows a line with text hangs past the margin (Word never wraps
+   * trailing spaces onto a line of their own); a line made only of spaces still
+   * wraps normally, so a fill-in blank longer than the column behaves as before.
+   */
+  hasText?: boolean;
   availableWidth: number;
   /** Left offset from floating images (pixels from content left edge) */
   leftOffset: number;
@@ -597,6 +604,7 @@ export function measureParagraph(
     maxFontSize: DEFAULT_FONT_SIZE,
     maxFontMetrics: null,
     maxImageHeightPx: 0,
+    hasText: false,
     availableWidth: firstLineWidth,
     leftOffset: firstLineFloatingMargins.leftMargin,
     rightOffset: firstLineFloatingMargins.rightMargin,
@@ -695,6 +703,7 @@ export function measureParagraph(
       maxFontSize: DEFAULT_FONT_SIZE,
       maxFontMetrics: null,
       maxImageHeightPx: 0,
+      hasText: false,
       availableWidth: adjustedWidth,
       leftOffset: floatingMargins.leftMargin,
       rightOffset: floatingMargins.rightMargin,
@@ -750,6 +759,7 @@ export function measureParagraph(
       currentLine.width += tabWidth;
       currentLine.toRun = runIndex;
       currentLine.toChar = 1;
+      currentLine.hasText = true;
       continue;
     }
 
@@ -813,6 +823,7 @@ export function measureParagraph(
       currentLine.width += imageWidth;
       currentLine.toRun = runIndex;
       currentLine.toChar = 1;
+      currentLine.hasText = true;
       continue;
     }
 
@@ -839,6 +850,7 @@ export function measureParagraph(
       currentLine.width += fieldWidth;
       currentLine.toRun = runIndex;
       currentLine.toChar = 1;
+      currentLine.hasText = true;
       continue;
     }
 
@@ -922,6 +934,7 @@ export function measureParagraph(
             currentLine.width += chunkWidth;
             currentLine.toRun = runIndex;
             currentLine.toChar = charIndex + chunkEnd;
+            currentLine.hasText = true;
 
             chunkStart = chunkEnd;
             if (chunkStart < word.length) {
@@ -935,8 +948,18 @@ export function measureParagraph(
         }
 
         // Check if word fits on current line
+        //
+        // A whitespace-only word that overflows a line which already holds text
+        // HANGS past the right margin instead of starting a new line. Word never
+        // wraps trailing spaces this way; contract fill-in blanks are exactly
+        // this shape ("法定代表人：" + 48 underlined spaces + 8 more + <w:br/>),
+        // and wrapping the 8 extra spaces produced a blank line before every
+        // hand-edited field — two phantom lines on template-395's page 1 and a
+        // whole extra page at the end.
+        const wordIsWhitespace = word.trim().length === 0;
         if (
           currentLine.width > 0 &&
+          !(wordIsWhitespace && currentLine.hasText) &&
           currentLine.width + wordWidth > currentLine.availableWidth + WIDTH_TOLERANCE
         ) {
           // Kinsoku shori (§17.3.1.16): the word about to move to a new line
@@ -956,6 +979,7 @@ export function measureParagraph(
             currentLine.width += measureTextWidth(peeled, style);
             currentLine.toRun = runIndex;
             currentLine.toChar = charIndex + peelEnd;
+            currentLine.hasText = true;
           }
           const remainderStart = charIndex + peelEnd;
           if (remainderStart < nextBreak) {
@@ -975,6 +999,7 @@ export function measureParagraph(
         currentLine.width += wordWidth;
         currentLine.toRun = runIndex;
         currentLine.toChar = nextBreak;
+        if (!wordIsWhitespace) currentLine.hasText = true;
 
         charIndex = nextBreak;
       }

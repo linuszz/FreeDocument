@@ -3,7 +3,32 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { resolveTableWidthPx, normalizeTableColumnWidths } from '../tableWidthUtils';
+import {
+  resolveTableWidthPx,
+  resolveTableOuterWidthPx,
+  normalizeTableColumnWidths,
+} from '../tableWidthUtils';
+
+describe('resolveTableOuterWidthPx', () => {
+  // template-395: w:tblW = 4998 pct over a 553.7px column with 7px cell
+  // margins. Word's PDF puts the table rules 5.4pt outside the column on each
+  // side (84.4..510.8pt inside 90..505.3pt), i.e. the percentage covers the
+  // cell content and the outer margins are added on top.
+  test('pct: adds the two outer cell margins', () => {
+    const outer = resolveTableOuterWidthPx(4998, 'pct', 553.73, 7, 7);
+    expect(outer).toBeCloseTo(553.73 * (4998 / 5000) + 14, 2);
+    // 425.9pt, matching the document's w:tblGrid (8519 twips) and the PDF.
+    expect(outer! / (96 / 72)).toBeCloseTo(426, 0);
+  });
+
+  test('dxa is already the outer width', () => {
+    expect(resolveTableOuterWidthPx(1440, 'dxa', 600, 7, 7)).toBeCloseTo(96, 1);
+  });
+
+  test('undefined width stays undefined', () => {
+    expect(resolveTableOuterWidthPx(undefined, 'pct', 600, 7, 7)).toBeUndefined();
+  });
+});
 
 describe('resolveTableWidthPx', () => {
   test('dxa: twips converted to pixels', () => {

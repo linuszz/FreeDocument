@@ -24,6 +24,7 @@ export type { ToFlowBlocksOptions } from './toFlowBlocks';
 // Table-width helpers used by both the React paged editor and the layout bridge.
 export {
   resolveTableWidthPx,
+  resolveTableOuterWidthPx,
   countTableColumns,
   normalizeTableColumnWidths,
 } from './tableWidthUtils';

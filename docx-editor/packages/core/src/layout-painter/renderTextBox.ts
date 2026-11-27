@@ -26,6 +26,8 @@ import { renderParagraphFragment } from './renderParagraph';
  */
 export const TEXTBOX_CLASS_NAMES = {
   textBox: 'layout-textbox',
+  /** Added to boxes floated by an anchor (positioned absolutely, off the flow). */
+  anchored: 'layout-textbox-anchored',
 };
 
 /**
@@ -49,6 +51,12 @@ export function renderTextBoxFragment(
 
   const containerEl = doc.createElement('div');
   containerEl.className = TEXTBOX_CLASS_NAMES.textBox;
+  // Anchored (floating) boxes are positioned by their anchor and can paint
+  // outside the header/footer flow band; renderers use this hook to skip
+  // clipping them. See `renderPage.ts` header/footer clip guards.
+  if (fragment.isAnchored) {
+    containerEl.classList.add(TEXTBOX_CLASS_NAMES.anchored);
+  }
 
   // Basic styling
   containerEl.style.position = 'absolute';

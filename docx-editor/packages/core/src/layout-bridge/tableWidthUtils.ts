@@ -41,6 +41,32 @@ export function countTableColumns(tableBlock: TableBlock): number {
 }
 
 /**
+ * Resolve a table's OUTER width in pixels.
+ *
+ * Word resolves `w:tblW` percentages against the cells' *content* area: a
+ * 100%-wide table's borders sit one cell margin outside the text column. The
+ * Word/WPS PDF of template-395 shows exactly that — its table rules run
+ * 84.4..510.8pt inside a 90..505.3pt column — and the document's own
+ * `w:tblGrid` agrees (8519 twips = 425.95pt, while `tblW="4998" pct` resolved
+ * against the bare column is 415.1pt). Resolving against the bare column
+ * shrank every cell by the two margins, which wrapped the 合计 blank line Word
+ * keeps on one line and pushed the table's tail onto another page.
+ *
+ * Non-percentage widths (`dxa`, `auto`) already describe the outer width.
+ */
+export function resolveTableOuterWidthPx(
+  value: number | undefined,
+  widthType: string | undefined,
+  contentWidth: number,
+  cellMarginLeft: number,
+  cellMarginRight: number
+): number | undefined {
+  const inner = resolveTableWidthPx(value, widthType, contentWidth);
+  if (inner === undefined) return undefined;
+  return widthType === 'pct' ? inner + cellMarginLeft + cellMarginRight : inner;
+}
+
+/**
  * Make `columnWidths` exactly `colCount` long with every entry positive.
  * Missing trailing columns inherit the average of existing positives; zero
  * or negative entries split the leftover `targetWidth` evenly. Callers

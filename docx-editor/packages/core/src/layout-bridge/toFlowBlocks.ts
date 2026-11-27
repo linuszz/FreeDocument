@@ -1230,9 +1230,13 @@ function convertParagraph(
  * OOXML stores border widths in eighths of a point.
  */
 function borderWidthToPixels(eighthsOfPoint: number): number {
-  // 1 point = 1.333 pixels at 96 DPI
-  // eighths of a point: divide by 8 first
-  return Math.max(1, Math.round((eighthsOfPoint / 8) * 1.333));
+  // 1 point = 1.333 pixels at 96 DPI. Keep the fractional width: Word's 0.5pt
+  // (`w:sz="4"`) rules are 0.67px, and rounding them up to a full pixel made
+  // every table row 0.33px too tall — 27 rows of template-395's form added up
+  // to a 6.5pt drift and moved the page-2 content a whole row down from the
+  // Word/WPS PDF. The painter still floors the painted stroke at 1px so the
+  // rules stay crisp (see formatToStyle).
+  return Math.max(0.5, (eighthsOfPoint / 8) * 1.333);
 }
 
 // OOXML border style → CSS border-style mapping
