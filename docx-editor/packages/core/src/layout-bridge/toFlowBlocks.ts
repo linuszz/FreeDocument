@@ -1174,13 +1174,29 @@ function mapTabAlignment(
 /**
  * Convert a paragraph node to a ParagraphBlock.
  */
+/**
+ * Word treats CR / LF / TAB inside `<w:t>` as ordinary characters, never as
+ * line breaks — only `<w:br/>` starts a new line. Documents written by external
+ * tooling (AI edit pipelines, generators) do put raw newlines in there, and the
+ * painter renders with `white-space: pre`, so an un-normalised newline draws a
+ * line that layout never measured and lands on top of the following one.
+ *
+ * Normalised here, at the layout boundary, so measurement and painting agree and
+ * the saved DOCX keeps its original bytes (round-trip is untouched). The mapping
+ * is 1:1 to keep PM char offsets valid.
+ */
+function normalizeRunWhitespace(run: Run): Run {
+  if (run.kind !== 'text' || !/[\r\n\t]/.test(run.text)) return run;
+  return { ...run, text: run.text.replace(/[\r\n\t]/g, ' ') };
+}
+
 function convertParagraph(
   node: PMNode,
   startPos: number,
   options: ToFlowBlocksOptions
 ): ParagraphBlock {
   const pmAttrs = node.attrs as PMParagraphAttrs;
-  const runs = paragraphToRuns(node, startPos, options);
+  const runs = paragraphToRuns(node, startPos, options).map(normalizeRunWhitespace);
   const attrs = convertParagraphAttrs(
     pmAttrs,
     options.theme,
