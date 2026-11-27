@@ -210,7 +210,12 @@ interface LineState {
  */
 function runToFontStyle(run: TextRun | TabRun): FontStyle {
   return {
-    fontFamily: run.fontFamily ?? DEFAULT_FONT_FAMILY,
+    // `||`, not `??`: an empty family string would produce an INVALID CSS font
+    // ("14px ") — the canvas then silently keeps whichever font the previous
+    // measurement set, so text was measured at the wrong size and lines wrapped
+    // far too early (template-613: 10.5pt body measured at the 18pt title's
+    // metrics, 24.5px/char instead of 14.5px).
+    fontFamily: run.fontFamily || DEFAULT_FONT_FAMILY,
     fontSize: run.fontSize ?? DEFAULT_FONT_SIZE,
     bold: run.bold,
     italic: run.italic,
@@ -274,6 +279,24 @@ function calculateTypographyMetrics(
   }
 
   return { ascent, descent, lineHeight };
+}
+
+/**
+ * Is the text covered by a measured line whitespace only?
+ *
+ * `toChar` is exclusive, matching the painter's run slicing
+ * (`renderParagraph.ts` → `getRunsForLine`).
+ */
+function isWhitespaceOnlyLine(block: ParagraphBlock, line: MeasuredLine): boolean {
+  if (line.toRun < line.fromRun) return false;
+  for (let ri = line.fromRun; ri <= line.toRun && ri < block.runs.length; ri++) {
+    const run = block.runs[ri];
+    if (run.kind !== 'text') return false;
+    const start = ri === line.fromRun ? line.fromChar : 0;
+    const end = ri === line.toRun ? line.toChar : run.text.length;
+    if (run.text.slice(start, end).trim() !== '') return false;
+  }
+  return true;
 }
 
 /**
@@ -939,6 +962,20 @@ export function measureParagraph(
 
   // Finalize the last line
   finalizeLine();
+
+  // Word hangs trailing spaces past the margin instead of starting a new line —
+  // contract fill-in blanks are exactly this shape ("出租方(以下简称甲方)：" + a
+  // run of underlined spaces). Without this the spaces wrap onto a line of their
+  // own, doubling the paragraph's height and shifting everything below it.
+  while (lines.length > 1 && isWhitespaceOnlyLine(block, lines[lines.length - 1])) {
+    const last = lines.pop()!;
+    const prev = lines[lines.length - 1];
+    prev.toRun = last.toRun;
+    prev.toChar = last.toChar;
+    prev.width += last.width;
+    prev.ascent = Math.max(prev.ascent, last.ascent);
+    prev.descent = Math.max(prev.descent, last.descent);
+  }
 
   // Calculate total height
   let totalHeight = lines.reduce((sum, line) => sum + line.lineHeight, 0);
