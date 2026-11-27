@@ -158,7 +158,7 @@ export function buildFontString(style: FontStyle): string {
   parts.push(`${fontSizePx}px`);
 
   // Use the font resolver for category-appropriate fallback stacks
-  const fontFamily = style.fontFamily ?? DEFAULT_FONT_FAMILY;
+  const fontFamily = style.fontFamily || DEFAULT_FONT_FAMILY;
   parts.push(getResolvedFallback(fontFamily));
 
   return parts.join(' ');
@@ -172,7 +172,7 @@ export function buildFontString(style: FontStyle): string {
  */
 export function getFontMetrics(style: FontStyle): FontMetrics {
   const fontSize = style.fontSize ?? DEFAULT_FONT_SIZE;
-  const fontFamily = style.fontFamily ?? DEFAULT_FONT_FAMILY;
+  const fontFamily = style.fontFamily || DEFAULT_FONT_FAMILY;
 
   // Convert font size from points to pixels
   const fontSizePx = ptToPx(fontSize);
