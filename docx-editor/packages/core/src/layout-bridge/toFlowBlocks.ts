@@ -107,6 +107,11 @@ export type ToFlowBlocksOptions = {
    * Word's 720-twip default.
    */
   defaultTabStop?: number;
+  /**
+   * `w:docGrid/@w:linePitch` of the body section, in twips. When a line grid is
+   * defined, Word uses it as the base of `lineRule="auto"` line spacing.
+   */
+  docGridLinePitch?: number;
 };
 
 const DEFAULT_FONT = 'Calibri';
@@ -1206,6 +1211,9 @@ function convertParagraph(
   if (options.defaultTabStop && options.defaultTabStop > 0) {
     attrs.defaultTabStop = options.defaultTabStop;
   }
+  if (options.docGridLinePitch && options.docGridLinePitch > 0) {
+    attrs.docGridLinePitch = options.docGridLinePitch;
+  }
 
   return {
     kind: 'paragraph',
@@ -1664,11 +1672,18 @@ export function toFlowBlocks(doc: PMNode, options: ToFlowBlocksOptions = {}): Fl
     defaultFont: options.defaultFont ?? DEFAULT_FONT,
     defaultSize: options.defaultSize ?? DEFAULT_SIZE,
   };
-  // `w:defaultTabStop` travels on the doc node (set by toProseDoc).
+  // `w:defaultTabStop` and `w:docGrid` travel on the doc node (set by toProseDoc).
   if (opts.defaultTabStop == null) {
     const fromDoc = (doc.attrs as { defaultTabStop?: number | null } | undefined)?.defaultTabStop;
     if (typeof fromDoc === 'number' && fromDoc > 0) {
       opts.defaultTabStop = fromDoc;
+    }
+  }
+  if (opts.docGridLinePitch == null) {
+    const fromDoc = (doc.attrs as { docGridLinePitch?: number | null } | undefined)
+      ?.docGridLinePitch;
+    if (typeof fromDoc === 'number' && fromDoc > 0) {
+      opts.docGridLinePitch = fromDoc;
     }
   }
 

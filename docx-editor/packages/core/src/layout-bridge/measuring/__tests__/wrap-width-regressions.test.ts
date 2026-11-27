@@ -72,6 +72,35 @@ describe('trailing spaces', () => {
   });
 });
 
+describe('line grid', () => {
+  test('w:docGrid linePitch sets the base of auto line spacing', () => {
+    const block = paragraph('文本');
+    block.attrs = {
+      ...block.attrs,
+      spacing: { line: 400 / 240, lineUnit: 'multiplier', lineRule: 'auto' },
+      docGridLinePitch: 312,
+    };
+
+    const measure = measureParagraph(block, 600);
+
+    // 312 twips = 20.8px base; w:line=400 is 400/240 → 34.67px = 26pt, which is
+    // exactly what Word/WPS render for template-395.docx (PDF line pitch 26.0pt).
+    expect(Math.round(measure.lines[0].lineHeight * 100) / 100).toBe(34.67);
+  });
+
+  test('without a grid the font metric is used', () => {
+    const block = paragraph('文本');
+    block.attrs = {
+      ...block.attrs,
+      spacing: { line: 400 / 240, lineUnit: 'multiplier', lineRule: 'auto' },
+    };
+
+    const measure = measureParagraph(block, 600);
+
+    expect(measure.lines[0].lineHeight).toBeLessThan(34);
+  });
+});
+
 describe('buildFontString', () => {
   test('an empty family falls back instead of producing an invalid font', () => {
     const font = buildFontString({ fontFamily: '', fontSize: 10.5 });

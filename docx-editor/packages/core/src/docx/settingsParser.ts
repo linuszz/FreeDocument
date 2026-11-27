@@ -35,3 +35,33 @@ export function parseSettings(xml: string | null | undefined): DocumentSettings 
 export function resolveDefaultTabStop(settings: DocumentSettings | undefined): number {
   return settings?.defaultTabStop ?? DEFAULT_TAB_STOP_TWIPS;
 }
+
+/**
+ * `w:docGrid/@w:linePitch` of the body section, in twips.
+ *
+ * In a document with a line grid (`w:docGrid type="lines"`), Word uses the grid
+ * pitch as the base for `lineRule="auto"` spacing: `w:line="400"` on a 312-twip
+ * grid renders at 1.667 × 15.6pt = 26.0pt, whatever the font's own metrics say.
+ * That is the value the Word/WPS PDF of `template-395.docx` shows (26.0pt line
+ * pitch for 10.5pt SimSun), while font-metric-only layout came out 23% shorter
+ * and paginated the table at the wrong row.
+ *
+ * Only the body section's grid is read (single-section documents are the norm);
+ * per-section grids are a follow-up.
+ */
+export function parseDocGridLinePitch(documentXml: string | null | undefined): number | undefined {
+  if (!documentXml) return undefined;
+
+  let linePitch: number | undefined;
+  const re = /<w:docGrid\b[^>]*>/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(documentXml)) !== null) {
+    const tag = match[0];
+    if (/\bw:type="(?:lines|linesAndChars|snapToChars|default)"/.test(tag)) {
+      const pitch = /\bw:linePitch="(\d+)"/.exec(tag);
+      if (pitch) linePitch = Number(pitch[1]);
+    }
+  }
+
+  return linePitch && Number.isFinite(linePitch) && linePitch > 0 ? linePitch : undefined;
+}

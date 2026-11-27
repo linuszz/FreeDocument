@@ -141,9 +141,13 @@ export function toProseDoc(document: Document, options?: ToProseDocOptions): PMN
 
   return schema.node(
     'doc',
-    // Layout reads this for the implicit tab grid (w:defaultTabStop). It is
-    // client-side only and never written back to the DOCX.
-    { defaultTabStop: document.settings?.defaultTabStop ?? null },
+    // Layout reads these for the implicit tab grid (w:defaultTabStop) and the
+    // line grid that Word uses as the base of `lineRule="auto"` spacing
+    // (w:docGrid/@linePitch). Client-side only; never written back to the DOCX.
+    {
+      defaultTabStop: document.settings?.defaultTabStop ?? null,
+      docGridLinePitch: document.settings?.docGridLinePitch ?? null,
+    },
     nodes
   );
 }
